@@ -458,16 +458,3 @@ pytest server/tests -v
 
 ---
 
-## 11. Interview Preparation & FAQ
-
-**Q1: Why can't you calculate area directly from EPSG:4326?**  
-*Answer:* EPSG:4326 coordinates are angular degrees on an ellipsoid. Longitude distances shrink from $\sim 111\text{ km}$ at the equator to $0\text{ km}$ at the poles. Planar calculations on degree coordinates return square degrees, not physical square meters.
-
-**Q2: How does the system determine the local UTM zone?**  
-*Answer:* We compute the dataset centroid longitude $\bar{\lambda}$ and apply $\lfloor(\bar{\lambda} + 180)/6\rfloor + 1$. Depending on latitude sign, we assign `EPSG:32600 + zone` (North) or `EPSG:32700 + zone` (South).
-
-**Q3: How does the system handle missing `.prj` files?**  
-*Answer:* It issues a structured warning in the API response, logs the omission, and falls back to standard `EPSG:4326` geographic coordinates without crashing.
-
-**Q4: How does the service scale to millions of features?**  
-*Answer:* Stream features via Fiona/Pyogrio iterators instead of in-memory buffering, offload processing to asynchronous background Celery tasks, and persist layers in a PostGIS cluster with spatial R-tree indexing.
