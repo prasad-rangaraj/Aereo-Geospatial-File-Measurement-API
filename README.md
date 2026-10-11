@@ -60,7 +60,7 @@ flowchart TD
 
 ```text
 c:\projects\Aereo\
-├── backend/
+├── server/
 │   ├── app/
 │   │   ├── api/
 │   │   │   └── routes/
@@ -90,7 +90,7 @@ c:\projects\Aereo\
 │   ├── pytest.ini                         # Pytest configuration
 │   ├── Dockerfile                         # Production Python 3.11 backend container
 │   └── requirements.txt                   # FastAPI, Shapely, PyProj, SQLAlchemy, Pyshp dependencies
-├── frontend/
+├── client/
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── Header.tsx                 # Branding, Swagger docs shortcut, and health badge
@@ -286,7 +286,27 @@ Returns an OGC-compliant standard `FeatureCollection` with all calculated metric
 
 ---
 
-## 6. How to Run Locally
+## 6. Interactive Frontend Dashboard
+
+The platform includes a high-performance web dashboard built with **React 19**, **TypeScript**, and **Leaflet**, offering instant visualization and inspection of processed survey files.
+
+### Key Capabilities
+- **Drag-and-Drop Ingestion:** Simple dropzone supporting `.kml` and Shapefile `.zip` bundles with real-time upload progress and size validation.
+- **One-Click Sample Data Loaders:** Pre-configured demo fixtures (**Bengaluru Drone Survey KML** and **Cadastral Parcels Shapefile ZIP**) allowing reviewers to evaluate the system immediately without preparing test files.
+- **Interactive Leaflet Cartography:** Free OpenStreetMap tile basemap (no paid API key required), auto-fitting map view to survey bounds, color-coded vector geometry styling:
+  - **Polygons:** Emerald green borders with semi-transparent fill (`#10b981`)
+  - **LineStrings:** Bright cyan-blue paths (`#38bdf8`)
+  - **Points / RTK Stations:** Amber circular markers (`#f59e0b`)
+  - **Popups:** Click any feature to open a popup showing feature ID, geometry type, and computed metrics.
+- **Aggregate & Per-Feature Metric Panels:**
+  - **Projected CRS Badge:** Real-time indicator displaying the auto-selected local UTM zone (e.g., `EPSG:32643 UTM Zone 43N`) or fallback equal-area projection.
+  - **Metric Totals:** Total computed polygon area ($m^2$, $\text{ha}$) and total linestring path length ($m$, $\text{km}$).
+  - **Feature Filter & Focus:** Filter feature lists by geometry type, click any card to zoom directly to that geometry on the map.
+- **GeoJSON Export Shortcut:** Direct link to download the enriched OGC GeoJSON containing embedded `_measurement` objects.
+
+---
+
+## 7. How to Run Locally
 
 ### Option A: Running with Docker Compose (Recommended)
 From the project root:
@@ -303,13 +323,13 @@ docker compose up --build
 
 #### 1. Start the Backend
 ```bash
-# Navigate to backend directory
-cd backend
+# Navigate to server directory
+cd server
 
 # Create and activate virtual environment
 python -m venv venv
 # On Windows:
-.\venv\Scripts\activate
+.\venv\Scripts\Activate.ps1
 # On Linux/macOS:
 source venv/bin/activate
 
@@ -318,12 +338,14 @@ pip install -r requirements.txt
 
 # Start FastAPI server
 uvicorn app.main:app --reload --port 8000
+# or simply:
+uvicorn main:app --reload
 ```
 
 #### 2. Start the Frontend
 ```bash
-# In a new terminal, navigate to frontend
-cd frontend
+# In a new terminal, navigate to client
+cd client
 
 # Install Node packages
 npm install
@@ -333,15 +355,17 @@ npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+> The Vite dev server proxies `/api/*` and `/sample_data/*` requests to `http://127.0.0.1:8000` automatically.
+
 ---
 
-## 7. Automated Test Suite
+## 8. Automated Test Suite
 
 The test suite validates file ingestion, mathematical reprojection, and error resilience.
 
 To run the full test suite with verbose reporting:
 ```bash
-pytest backend/tests -v
+pytest server/tests -v
 ```
 
 ### Test Coverage Checklist (22/22 Tests Passing)
@@ -372,7 +396,7 @@ pytest backend/tests -v
 
 ---
 
-## 8. Design Decisions & Technical Trade-offs
+## 9. Design Decisions & Technical Trade-offs
 
 1. **FastAPI vs. Django REST Framework:**
    - *Decision:* Selected **FastAPI**.
@@ -386,24 +410,55 @@ pytest backend/tests -v
 4. **Resilient Per-Feature Fault Isolation:**
    - *Decision:* Wrapped each feature calculation inside an isolated `try/except` block and applied `shapely.validation.make_valid()`.
    - *Rationale:* In enterprise drone surveys, one corrupt parcel polygon or self-intersecting road must never invalidate or crash the processing of the remaining hundreds of valid features in the file.
+5. **Decoupled Architecture with GeoJSON as Contract:**
+   - *Decision:* Frontend communicates via REST and consumes standard GeoJSON while backend performs all CRS projection math.
+   - *Rationale:* Keeps the frontend lightweight and client-side processing minimal while guaranteeing single-source-of-truth calculations on the backend.
 
 ---
 
-## 9. Learnings & Future Scope
+## 10. Learnings & Future Scope
 
-### What Was Learned
-- **Geodesic vs. Planar Coordinate Reference Systems:** Understanding why ellipsoidal calculations on WGS 84 require projecting onto conformal Transverse Mercator planes to compute meaningful Euclidean areas.
-- **ESRI Shapefile Specification Nuances:** Handling the four-part file mandate (`.shp`, `.shx`, `.dbf`, `.prj`) and ESRI's clockwise outer-ring requirement.
-- **Defensive XML Parsing:** Sanitizing Google Earth KML XML namespaces and handling nested `<MultiGeometry>` and inner `<LinearRing>` doughnut holes.
+### Key Engineering Learnings
 
-### Future Scope
-- **Asynchronous Distributed Worker Queue:** Integrate Celery or Redis RQ with minIO/S3 object storage for multi-gigabyte orthomosaic vector layers.
-- **3D Surface Area & Digital Elevation Models (DEM):** Incorporate drone elevation models to calculate 3D slope area and cut/fill volumetric analysis for mining operations.
-- **PostGIS Integration:** Add native spatial indexing (`GIST`) and spatial SQL queries for large-scale geographic bounding box intersections.
+#### Backend & Geospatial Engineering
+1. **Geodesic vs. Planar Coordinate Reference Systems:** Understanding why ellipsoidal calculations on WGS 84 (`EPSG:4326`) produce dimensionally meaningless "square degrees", and mastering dynamic projection to local conformal Universal Transverse Mercator (UTM) planes or equal-area cylindrical projections (`EPSG:6933`) for high-precision Euclidean metrics.
+2. **ESRI Shapefile Specification Nuances:** Managing the strict multi-part file requirement (`.shp` geometries, `.shx` spatial index, `.dbf` dBase attributes, and `.prj` coordinate reference string) and handling ESRI's clockwise outer-ring vs. counter-clockwise inner-ring conventions.
+3. **Defensive XML Parsing & Geometry Extraction:** Sanitizing Google Earth KML XML namespaces, safely ignoring styling tags (`<Style>`, `<PolyStyle>`), and extracting complex nested `<MultiGeometry>` elements including polygon inner-ring doughnut holes.
+4. **Resilient Fault Isolation in Spatial Pipelines:** Implementing isolated per-feature calculation boundaries and utilizing `shapely.validation.make_valid()` to repair self-intersecting survey polygons without aborting batch ingestion.
+5. **Modern Vectorized Spatial Transformations:** Leveraging Shapely 2.0's C-level NumPy coordinate array buffers with PyProj `Transformer` rather than deprecated Python-loop callbacks, yielding dramatic throughput improvements on large survey datasets.
+
+#### Frontend & Full-Stack Web GIS
+1. **GeoJSON as the Architectural Universal Bridge:** The backend stores and returns geometry in standard GeoJSON format (source CRS), while Leaflet renders it natively on the map. This separation means the frontend never needs to calculate complex projection math — it simply passes coordinates to Leaflet.
+2. **Leaflet Coordinate Conventions vs. GeoJSON:** Leaflet APIs expect `[latitude, longitude]` (Y, X) ordering while the GeoJSON standard specifies `[longitude, latitude]` (X, Y). Leaflet's `geoJSON()` layer handles this transformation automatically, but custom coordinate markers require deliberate order handling.
+3. **Map Lifecycle Management in React 19:** Managing the Leaflet map instance imperatively with `useRef` and ensuring rigorous cleanup handlers on unmount to prevent the `"Map container is already initialized"` error under React StrictMode.
+4. **Vite Reverse Proxy & Unified Docker Deployment:** Configuring Vite dev-server proxying (`/api/*` and `/sample_data/*`) to eliminate CORS hurdles during local development while mirroring the identical Nginx reverse-proxy routing topology used in production containers.
+5. **End-to-End Type Safety:** Establishing strong TypeScript interfaces (`FileInfo`, `FeatureItem`, `FileMeasurementsResponse`) matching Pydantic response models, preventing schema drift across the full stack.
 
 ---
 
-## 10. Interview Preparation & FAQ
+### Future Scope & Production Roadmap
+
+#### 1. Backend Scalability & Spatial Infrastructure
+- **Asynchronous Task Queue (Celery + Redis):** Offload long-running processing of multi-gigabyte orthomosaic vector layers to distributed Celery worker nodes, notifying the frontend via WebSockets or Server-Sent Events (SSE).
+- **PostGIS & Spatial SQL Storage:** Migrate persistence from SQLite to PostgreSQL with PostGIS extension, enabling native `ST_Area`, `ST_Length`, and R-Tree spatial indexing (`GIST`) for high-speed spatial queries.
+- **Object Storage Integration (S3 / MinIO):** Store large raw geospatial archives and generated GeoJSON artifacts directly on S3-compatible cloud storage rather than local disk.
+- **Extended Geospatial Format Ingestion:** Add support for GeoPackage (`.gpkg`), FlatGeobuf (`.fgb`), direct GeoJSON uploads, and DXF/DWG CAD engineering drawings.
+
+#### 2. Advanced Geospatial & Photogrammetric Analysis
+- **3D Surface Area & Elevation Profiles (DEM/DSM):** Integrate drone Digital Elevation Models (DEM) to calculate true 3D slope surface area and generate elevation profile charts along LineString paths.
+- **Volumetric Cut/Fill Calculations:** For mining and excavation surveying, compare sequential drone surveys over time to compute stockpile volumes and earthwork movement.
+- **Cadastral Boundary Encroachment Detection:** Automated polygon intersection checks (`ST_Intersection`) to highlight property boundary disputes or right-of-way violations.
+
+#### 3. Client Dashboard Enhancements
+- **Dynamic Measurement Units Toggle:** Instant client-side switching between Metric ($m^2$, $\text{ha}$, $m$, $\text{km}$) and Imperial (acres, $\text{sq ft}$, feet, miles) units without API re-querying.
+- **Interactive Sketch & Measurement Tools:** Integrate Leaflet Draw / Geoman for analysts to sketch custom boundary polygons directly on satellite imagery and request on-the-fly metric calculations.
+- **Side-by-Side Survey Comparison Mode:** Split-screen map comparison to inspect change detection between before-and-after survey epochs.
+- **Offline Progressive Web App (PWA) Support:** Cache vector layers and base map tiles via Service Workers so field surveyors can inspect measurements without internet connectivity on-site.
+- **Export Formats:** One-click export of measurement reports to CSV, styled PDF survey summary sheets, and Shapefile download.
+
+---
+
+## 11. Interview Preparation & FAQ
 
 **Q1: Why can't you calculate area directly from EPSG:4326?**  
 *Answer:* EPSG:4326 coordinates are angular degrees on an ellipsoid. Longitude distances shrink from $\sim 111\text{ km}$ at the equator to $0\text{ km}$ at the poles. Planar calculations on degree coordinates return square degrees, not physical square meters.

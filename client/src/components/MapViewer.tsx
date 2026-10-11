@@ -26,9 +26,9 @@ export const MapViewer: React.FC<MapViewerProps> = ({
       attributionControl: true
     }).setView([12.9716, 77.5946], 13); // Default to Bengaluru
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap &copy; CARTO'
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
     mapInstanceRef.current = map;

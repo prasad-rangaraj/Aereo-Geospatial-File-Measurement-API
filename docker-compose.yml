@@ -1,7 +1,7 @@
 services:
   backend:
     build:
-      context: ./backend
+      context: ./server
       dockerfile: Dockerfile
     container_name: aereo-geospatial-backend
     ports:
@@ -21,7 +21,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./client
       dockerfile: Dockerfile
     container_name: aereo-geospatial-frontend
     ports:

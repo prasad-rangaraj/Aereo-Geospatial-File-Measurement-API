@@ -5,7 +5,6 @@ export const Header: React.FC = () => {
   return (
     <header className="app-header">
       <div className="header-brand">
-        <div className="brand-badge">AEREO</div>
         <div className="header-title-group">
           <h1>Geospatial File Measurement Platform</h1>
           <p>Automated Vector Feature Extraction & Projected Coordinate Metric Calculations</p>
