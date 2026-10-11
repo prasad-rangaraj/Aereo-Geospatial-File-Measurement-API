@@ -10,11 +10,12 @@ import zipfile
 from pathlib import Path
 import shapefile
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
-SAMPLE_DIR = ROOT_DIR / "sample_data"
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = BACKEND_DIR.parent
+SAMPLE_DIR = BACKEND_DIR / "sample_data"
 SAMPLE_DIR.mkdir(parents=True, exist_ok=True)
-BACKEND_SAMPLE_DIR = ROOT_DIR / "backend" / "sample_data"
-BACKEND_SAMPLE_DIR.mkdir(parents=True, exist_ok=True)
+ROOT_SAMPLE_DIR = ROOT_DIR / "sample_data"
+ROOT_SAMPLE_DIR.mkdir(parents=True, exist_ok=True)
 
 def generate_kml_survey():
     kml_content = """<?xml version="1.0" encoding="UTF-8"?>
@@ -207,9 +208,9 @@ if __name__ == "__main__":
     generate_road_network_kml()
     generate_corrupt_zip()
 
-    # Also sync to backend/sample_data
+    # Also sync to root sample_data
     import shutil
     for f in SAMPLE_DIR.glob("*"):
-        shutil.copy2(f, BACKEND_SAMPLE_DIR / f.name)
+        shutil.copy2(f, ROOT_SAMPLE_DIR / f.name)
 
     print("All sample data fixtures created successfully in sample_data/ and backend/sample_data/.")

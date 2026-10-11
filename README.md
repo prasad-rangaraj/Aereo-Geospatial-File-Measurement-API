@@ -84,6 +84,10 @@ c:\projects\Aereo\
 │   │   ├── test_measurements.py           # Polygon area, holes, linestring length, and point tests
 │   │   ├── test_crs_transformation.py     # UTM projection math, hemisphere logic, degree vs meter validation
 │   │   └── test_errors.py                 # Corrupt archives, missing .prj, and malformed KML tests
+│   ├── scripts/
+│   │   └── generate_sample_data.py        # Standalone generator for test fixtures
+│   ├── .env.example                       # Backend environment configuration template
+│   ├── pytest.ini                         # Pytest configuration
 │   ├── Dockerfile                         # Production Python 3.11 backend container
 │   └── requirements.txt                   # FastAPI, Shapely, PyProj, SQLAlchemy, Pyshp dependencies
 ├── frontend/
@@ -99,6 +103,7 @@ c:\projects\Aereo\
 │   │   ├── App.tsx                        # Main dashboard coordinator
 │   │   ├── index.css                      # Modern dark-mode styling and glassmorphism tokens
 │   │   └── main.tsx                       # React DOM entrypoint
+│   ├── .env.example                       # Frontend environment configuration template
 │   ├── Dockerfile                         # Multi-stage Node build & Nginx production container
 │   ├── nginx.conf                         # Reverse proxy config for API routing
 │   ├── package.json
@@ -109,10 +114,11 @@ c:\projects\Aereo\
 │   ├── cadastral_parcels.zip              # Verified ESRI Shapefile bundle (shp, shx, dbf, prj)
 │   ├── road_network.kml                   # Linear infrastructure test fixture
 │   └── invalid_corrupt.zip                # Negative test fixture for archive validation
+├── .github/
+│   └── workflows/
+│       └── ci.yml                         # Automated GitHub Actions CI pipeline
 ├── docker-compose.yml                     # Unified orchestration for backend + frontend
-├── generate_sample_data.py                # Standalone generator for test fixtures
 ├── .gitignore
-├── .env.example
 └── README.md
 ```
 
